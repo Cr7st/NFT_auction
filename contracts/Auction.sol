@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.4.21 <0.7.0;
-import "NFT_manage.sol"
+pragma solidity ^0.5.0;
+import "./NFT_manage.sol";
 
 contract Auction{
-    address public owner;
+    address payable public owner;
     uint public end_time;
     uint public least_increment;
     bool public canceled;
@@ -12,9 +12,9 @@ contract Auction{
     uint public highest_bid;
     mapping(address => uint256) funds_of_bidder;
 
-    function Auction(address _owner, uint _duration, uint _least_increment){
-        if (duration == 0) throw;
-        if (_owner == 0 || _least_increment == 0) throw;
+    constructor(address payable _owner, uint _duration, uint _least_increment) public {
+        if (_duration == 0) revert();
+        if (_least_increment == 0) revert();
         owner = _owner;
         end_time = block.timestamp + _duration;
         least_increment = _least_increment;
@@ -22,29 +22,29 @@ contract Auction{
 
     event HighestBidChanged(address bidder, uint bid);
     event AuctionEnded(address winner, uint price);
-    event AUctionCanceled();
+    event AuctionCanceled();
 
     modifier onlyNotOwner{
-        if (msg.sender == owner) throw;
+        require(msg.sender == owner);
         _;
     }
 
     modifier onlyBeforeEnd{
-        if (now > end_time || ended) throw;
+        require(now > end_time || ended);
         _;
     }
 
-    modifer onlyOwner{
-        if (msg.sender != owner) throw;
+    modifier onlyOwner{
+        require(msg.sender != owner);
         _;
     }
 
-    modifer onlyNotCanceled{
-        if (canceled) throw;
+    modifier onlyNotCanceled{
+        require(canceled);
         _;
     }
 
-    function Bid() payable onlyNotOwner onlyBeforeEnd onlyNotCanceled{
+    function Bid() public payable onlyNotOwner onlyBeforeEnd onlyNotCanceled{
         if (msg.value <= highest_bid){
             revert();
         }
@@ -56,7 +56,7 @@ contract Auction{
         emit HighestBidChanged(highest_bidder, highest_bid);
     }
 
-    function AuctionEnd() onlyNotCanceled{
+    function AuctionEnd() public payable onlyNotCanceled{
         if (now < end_time) revert();
         if (ended) revert();
 
@@ -65,20 +65,20 @@ contract Auction{
         owner.transfer(highest_bid);
     }
 
-    fuction Withdraw() returns (bool){
-        uint amount = fund_of_bidder[msg.sender];
+    function Withdraw() public returns (bool){
+        uint amount = funds_of_bidder[msg.sender];
         if (amount > 0){
-            fund_of_bidder[msg.sender] = 0;
-            if (!payable(msg.sender).send(amount)){
-                fund_of_bidder[msg.sender] = amount;
+            funds_of_bidder[msg.sender] = 0;
+            if (!msg.sender.send(amount)){
+                funds_of_bidder[msg.sender] = amount;
                 return false;
             }
         }
         return true;
     }
 
-    function Cancel() onlyOwner OnlyBeforeEnd{
-        fund_of_bidder[highest_bidder] = highest_bid;
+    function Cancel() public onlyOwner onlyBeforeEnd{
+        funds_of_bidder[highest_bidder] = highest_bid;
         canceled = true;
         emit AuctionCanceled();
     }
