@@ -2,9 +2,12 @@
 
 ## Introduction
 
-This is a naive implementation of an auction platform selling NFTs. Users can mint their own NFTs, create an auction for NFT, set an end time of the 
+This is a naive implementation of an auction platform selling NFTs. Users can mint their own NFTs, create an auction for NFT, set an end time of the auction and bid with ETH.
 
-auction and bid with ETH.
+Here we have some screenshots of this app.
+![Alt text](screenshot1.png)
+![Alt text](screenshot2.png)
+![Alt text](screenshot3.png)
 
 ## Implementation (React + Solidity + truffle)
 
