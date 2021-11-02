@@ -1,5 +1,9 @@
-var SimpleStorage = artifacts.require("./SimpleStorage.sol");
+//var Auction = artifacts.require("./Auction.sol");
+var AuctionFactory = artifacts.require("./AuctionFactory.sol");
+var NFTManage = artifacts.require("./NFTManage.sol");
 
 module.exports = function(deployer) {
-  deployer.deploy(SimpleStorage);
+  //deployer.deploy(Auction);
+  deployer.deploy(AuctionFactory);
+  deployer.deploy(NFTManage);
 };

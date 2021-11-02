@@ -1,23 +1,24 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.5.0;
-import "./NFT_manage.sol";
+pragma solidity ^0.8.0;
+//import "./NFT_manage.sol";
 
 contract Auction{
     address payable public owner;
     uint public end_time;
-    uint public least_increment;
+    uint256 public token_ID;
     bool public canceled;
     bool ended;
     address public highest_bidder;
     uint public highest_bid;
     mapping(address => uint256) funds_of_bidder;
 
-    constructor(address payable _owner, uint _duration, uint _least_increment) public {
-        if (_duration == 0) revert();
-        if (_least_increment == 0) revert();
+    constructor(address payable _owner, uint _end_time, uint256 _token_ID){
+        if (_end_time < block.timestamp) revert();
         owner = _owner;
-        end_time = block.timestamp + _duration;
-        least_increment = _least_increment;
+        end_time = _end_time;
+        token_ID = _token_ID;
+        highest_bid = 0;
+        ended = false;
     }
 
     event HighestBidChanged(address bidder, uint bid);
@@ -25,54 +26,76 @@ contract Auction{
     event AuctionCanceled();
 
     modifier onlyNotOwner{
-        require(msg.sender == owner);
-        _;
-    }
-
-    modifier onlyBeforeEnd{
-        require(now > end_time || ended);
-        _;
-    }
-
-    modifier onlyOwner{
         require(msg.sender != owner);
         _;
     }
 
+    modifier onlyBeforeEnd{
+        if (block.timestamp * 1000 < end_time && !ended) _;
+        else {
+            revert();
+        }
+    }
+
+    modifier onlyOwner{
+        require(msg.sender == owner);
+        _;
+    }
+
     modifier onlyNotCanceled{
-        require(canceled);
+        require(!canceled);
         _;
     }
 
     function Bid() public payable onlyNotOwner onlyBeforeEnd onlyNotCanceled{
-        if (msg.value <= highest_bid){
-            revert();
+        if (msg.sender == highest_bidder){
+            if (msg.value + highest_bid <= highest_bid){
+                revert();
+            }
+        }
+        else{
+            if (msg.value + funds_of_bidder[msg.sender] <= highest_bid){
+                revert();
+            }
         }
 
-        funds_of_bidder[highest_bidder] += msg.value;
-        highest_bidder = msg.sender;
-        highest_bid = msg.value;
+        if (highest_bid == 0){
+            funds_of_bidder[msg.sender] = 0;
+            highest_bid = msg.value;
+            highest_bidder = msg.sender;
+        }
+        else {
+            funds_of_bidder[highest_bidder] += highest_bid;
+            highest_bidder = msg.sender;
+            highest_bid = msg.value + funds_of_bidder[msg.sender];
+            funds_of_bidder[msg.sender] = 0;
+        }
+        funds_of_bidder[owner] = highest_bid;
         
         emit HighestBidChanged(highest_bidder, highest_bid);
     }
 
     function AuctionEnd() public payable onlyNotCanceled{
-        if (now < end_time) revert();
+        if (block.timestamp * 1000 < end_time) revert();
         if (ended) revert();
 
         ended = true;
         emit AuctionEnded(highest_bidder, highest_bid);
         owner.transfer(highest_bid);
+        funds_of_bidder[owner] = 0;
     }
 
     function Withdraw() public returns (bool){
         uint amount = funds_of_bidder[msg.sender];
         if (amount > 0){
             funds_of_bidder[msg.sender] = 0;
-            if (!msg.sender.send(amount)){
+            if (!payable(msg.sender).send(amount)){
                 funds_of_bidder[msg.sender] = amount;
                 return false;
             }
+        }
+        else {
+            return false;
         }
         return true;
     }
@@ -81,5 +104,21 @@ contract Auction{
         funds_of_bidder[highest_bidder] = highest_bid;
         canceled = true;
         emit AuctionCanceled();
+    }
+
+    function LookUpBid() public view returns (uint){
+        if (msg.sender == owner) {
+            return 0;
+        }
+        else if (msg.sender == highest_bidder){
+            return highest_bid;
+        }
+        else {
+            return funds_of_bidder[msg.sender];
+        }
+    }
+
+    function LookUpFund() public view returns (uint){
+        return funds_of_bidder[msg.sender];
     }
 }
