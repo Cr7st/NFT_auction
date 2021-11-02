@@ -111,13 +111,17 @@ class ClaimWithdraw extends Component{
             status = 'Ended'
         }
 
-        if (status == "Canceled" && this.state.currentAccount !== auction.owner){
+        if (status == "Canceled" && this.state.currentAccount !== auction.owner && auction.withdraw_amount > 0){
             return true
         } else if (status === "Ended" && auction.highest_bidder === this.state.currentAccount && auction.claimed === false){
             return true
         } else if (status === "Ended" && auction.owner === this.state.currentAccount && auction.withdraw_amount > 0){
             return true
-        } else{
+        } else if (status === "Ended" && this.state.currentAccount !== auction.owner && this.state.currentAccount !== auction.highest_bidder
+                    && auction.withdraw_amount > 0){
+                        return true;
+                    } 
+        else{
             return false
         }
     }
